@@ -6,7 +6,34 @@ from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
 
 load_dotenv()
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #000000);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+}
 
+/* Smooth animation */
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Optional: make text easier to read */
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
+    z-index: -1;
+}
+</style>
+""", unsafe_allow_html=True)
 # --- Clients ---
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
