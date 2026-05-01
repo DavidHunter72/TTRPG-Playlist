@@ -21,7 +21,6 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
 # -------------------------------
 
 def set_dynamic_background(theme):
-    """Applies animated gradient background based on theme."""
     if "battle" in theme.lower():
         colors = "#3a0d0d, #7a1f1f, #000000"
     elif "forest" in theme.lower():
@@ -33,10 +32,14 @@ def set_dynamic_background(theme):
 
     st.markdown(f"""
     <style>
-    .stApp {{
+    html, body, [data-testid="stAppViewContainer"] {{
+        height: 100%;
+    }}
+
+    [data-testid="stAppViewContainer"] {{
         background: linear-gradient(-45deg, {colors});
         background-size: 400% 400%;
-        animation: gradientBG 15s ease infinite;
+        animation: gradientBG 12s ease infinite;
     }}
 
     @keyframes gradientBG {{
@@ -45,15 +48,12 @@ def set_dynamic_background(theme):
         100% {{ background-position: 0% 50%; }}
     }}
 
-    /* Dark overlay for readability */
-    .stApp::before {{
+    /* Dark overlay */
+    [data-testid="stAppViewContainer"]::before {{
         content: "";
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
+        inset: 0;
+        background: rgba(0,0,0,0.45);
         z-index: -1;
     }}
     </style>
