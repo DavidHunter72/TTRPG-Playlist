@@ -1,49 +1,70 @@
 import streamlit as st
-import os
 from openai import OpenAI
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-from dotenv import load_dotenv
 
-load_dotenv()
-st.markdown("""
-<style>
-.stApp {
-    background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #000000);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
-}
+# -------------------------------
+# 🔐 API CLIENT SETUP
+# -------------------------------
 
-/* Smooth animation */
-@keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
+# OpenAI client (uses Streamlit secrets)
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-/* Optional: make text easier to read */
-.stApp::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.4);
-    z-index: -1;
-}
-</style>
-""", unsafe_allow_html=True)
-# --- Clients ---
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
+# Spotify client (read-only search)
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=st.secrets["SPOTIPY_CLIENT_ID"],
     client_secret=st.secrets["SPOTIPY_CLIENT_SECRET"]
 ))
 
-# --- Generate playlist ---
+# -------------------------------
+# 🎨 DYNAMIC ANIMATED BACKGROUND
+# -------------------------------
+
+def set_dynamic_background(theme):
+    """Applies animated gradient background based on theme."""
+    if "battle" in theme.lower():
+        colors = "#3a0d0d, #7a1f1f, #000000"
+    elif "forest" in theme.lower():
+        colors = "#0f3d2e, #1b5e20, #000000"
+    elif "mystery" in theme.lower():
+        colors = "#1a1a2e, #16213e, #000000"
+    else:
+        colors = "#0f2027, #203a43, #2c5364, #000000"
+
+    st.markdown(f"""
+    <style>
+    .stApp {{
+        background: linear-gradient(-45deg, {colors});
+        background-size: 400% 400%;
+        animation: gradientBG 15s ease infinite;
+    }}
+
+    @keyframes gradientBG {{
+        0% {{ background-position: 0% 50%; }}
+        50% {{ background-position: 100% 50%; }}
+        100% {{ background-position: 0% 50%; }}
+    }}
+
+    /* Dark overlay for readability */
+    .stApp::before {{
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: -1;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
+# -------------------------------
+# 🤖 AI PLAYLIST GENERATION
+# -------------------------------
+
 def generate_playlist(theme):
+    """Uses OpenAI to generate 6 themed songs."""
     prompt = f"""
     You are a game master.
 
@@ -54,42 +75,93 @@ def generate_playlist(theme):
     Song - Artist
     """
 
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}]
+        )
 
-    text = response.choices[0].message.content
-    songs = [line for line in text.split("\n") if "-" in line]
-    return songs[:6]
+        text = response.choices[0].message.content
+        songs = [line for line in text.split("\n") if "-" in line]
+        return songs[:6]
 
-# --- Spotify search ---
+    except Exception as e:
+        st.error(f"Error generating playlist: {e}")
+        return []
+
+# -------------------------------
+# 🎧 SPOTIFY SEARCH
+# -------------------------------
+
 def search_spotify(song):
-    result = sp.search(q=song, type="track", limit=1)
-    if result["tracks"]["items"]:
-        track = result["tracks"]["items"][0]
-        return {
-            "name": track["name"],
-            "artist": track["artists"][0]["name"],
-            "url": track["external_urls"]["spotify"],
-            "image": track["album"]["images"][0]["url"]
-        }
+    """Finds a song on Spotify and returns metadata."""
+    try:
+        result = sp.search(q=song, type="track", limit=1)
+
+        if result["tracks"]["items"]:
+            track = result["tracks"]["items"][0]
+            return {
+                "name": track["name"],
+                "artist": track["artists"][0]["name"],
+                "url": track["external_urls"]["spotify"],
+                "image": track["album"]["images"][0]["url"]
+            }
+    except Exception as e:
+        st.warning(f"Spotify error: {e}")
+
     return None
 
-# --- UI ---
+# -------------------------------
+# 🖥️ UI
+# -------------------------------
+
+st.set_page_config(page_title="TTRPG Playlist Generator", page_icon="🎲")
+
 st.title("🎲 TTRPG Playlist Generator")
+st.caption("AI-generated soundtracks for immersive tabletop storytelling")
 
-theme = st.text_input("Describe your scene:")
+# User input
+theme = st.text_input("Describe your scene (e.g., boss battle, forest exploration):")
 
-if st.button("Generate"):
-    if theme:
-        with st.spinner("Generating..."):
+# Apply animated background
+if theme:
+    set_dynamic_background(theme)
+
+# Generate button
+if st.button("🎵 Generate Playlist"):
+    if not theme:
+        st.warning("Please enter a theme first.")
+    else:
+        with st.spinner("Summoning your soundtrack..."):
             songs = generate_playlist(theme)
 
-        for s in songs:
-            track = search_spotify(s)
-            if track:
-                st.image(track["image"], width=100)
-                st.markdown(f"[{track['name']} - {track['artist']}]({track['url']})")
-            else:
-                st.write(f"Not found: {s}")
+        if songs:
+            st.subheader("🎧 Your Playlist")
+
+            for s in songs:
+                track = search_spotify(s)
+
+                if track:
+                    cols = st.columns([1, 4])
+
+                    with cols[0]:
+                        st.image(track["image"], width=80)
+
+                    with cols[1]:
+                        st.markdown(f"**[{track['name']} - {track['artist']}]({track['url']})**")
+
+                else:
+                    st.write(f"❌ Not found: {s}")
+
+        else:
+            st.error("Failed to generate playlist. Try a different theme.")
+
+# -------------------------------
+# 📌 FOOTER
+# -------------------------------
+
+st.markdown("---")
+st.caption(
+    "Built with Streamlit, OpenAI, and Spotify API | "
+    "Playlist export available in local version via OAuth"
+)
