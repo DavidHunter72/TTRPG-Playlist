@@ -2,7 +2,7 @@ import streamlit as st
 import os
 from openai import OpenAI
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,12 +10,12 @@ load_dotenv()
 # --- Clients ---
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-sp = spotipy.Spotify(
-    auth_manager=SpotifyClientCredentials(
-        client_id=os.getenv("SPOTIPY_CLIENT_ID"),
-        client_secret=os.getenv("SPOTIPY_CLIENT_SECRET")
-    )
-)
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+    client_id=st.secrets["SPOTIPY_CLIENT_ID"],
+    client_secret=st.secrets["SPOTIPY_CLIENT_SECRET"],
+    redirect_uri=st.secrets["SPOTIPY_REDIRECT_URI"],
+    scope="playlist-modify-public"
+))
 
 # --- Generate playlist ---
 def generate_playlist(theme):
